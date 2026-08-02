@@ -1,0 +1,42 @@
+name: Build LaTeX and Release PDF
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Cache Tectonic bundle
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Tectonic
+          key: tectonic-0.16.9-bundle
+
+      - name: Install Tectonic
+        run: |
+          curl -fL -o tectonic.tar.gz \
+            "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.16.9/tectonic-0.16.9-x86_64-unknown-linux-gnu.tar.gz"
+          tar xzf tectonic.tar.gz
+          sudo install -m755 tectonic /usr/local/bin/tectonic
+          tectonic --version
+
+      - name: Build PDF
+        run: tectonic resume.tex
+
+      - name: Upload PDF to rolling 'latest' release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: latest
+          name: Latest PDF build
+          body: Built from commit `${{ github.sha }}`
+          files: resume.pdf
+          fail_on_unmatched_files: true
+          make_latest: true
